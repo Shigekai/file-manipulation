@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
+// Aluno: Lucas Gabriel
 int pgmToBinary(const char* filename, char* format, int* width, int* height, int* maxValue) {
     FILE * pgmFile, * binaryFile;
     int pixel;

@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 // Aluno: Lucas Gabriel
 int pgmToBinary(const char* filename, char* format, int* width, int* height, int* maxValue) {
     FILE * pgmFile, * binaryFile;
@@ -19,7 +20,7 @@ int pgmToBinary(const char* filename, char* format, int* width, int* height, int
     fscanf(pgmFile, "%d %d", width, height);
     fscanf(pgmFile, "%d", maxValue);
 
-    fprintf(binaryFile, "P5\n%d %d\n%d\n", *width, *height, *maxValue);
+    fprintf(binaryFile, "P2\n%d %d\n%d\n", *width, *height, *maxValue);
 
     for (int i = 0; i < (*width) * (*height); i++) {
         fscanf(pgmFile, "%d", &pixel);
@@ -32,11 +33,3 @@ int pgmToBinary(const char* filename, char* format, int* width, int* height, int
     return 0;
 }
 
-int main() {
-    char format[3];
-    int width, height, maxValue;
-
-    pgmToBinary("barbara", format, &width, &height, &maxValue);
-
-    return 0;
-}

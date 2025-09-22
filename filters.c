@@ -14,7 +14,7 @@ static void apply_negative(uint8_t *buf, uint32_t pixels, uint8_t bpp, uint32_t 
         }
     }
 }
-
+//Lucas Gabriel
 static void apply_threshold(uint8_t *buf, uint32_t pixels, uint8_t bpp, uint32_t maxval, uint32_t th) {
     if (th > maxval) th = maxval;
     if (bpp == 1) {

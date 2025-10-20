@@ -1,0 +1,1 @@
+Arquivos na pasta database manipulam diretamente o banco de dados (database.bin)

@@ -1,11 +1,11 @@
 #include <stdio.h>
 
-#include "imgdb.h"
-#include "store.h"
+#include "headers.h"
+#include "database.h"
 #include "menu.h"
 
 int main(void) {
-    ensure_bin_folder();
-    menu();
+    ensureBin();
+    startMenu();
     return 0;
 }

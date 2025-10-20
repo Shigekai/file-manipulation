@@ -214,3 +214,26 @@ static void commandDelete(void) {
         printf("Falha ao deletar imagem!\n");
     }
 }
+
+static void commandCompact(void) {
+    printf("Iniciando compactação do banco de dados...\n");
+    printf("Este procedimento é irreversível\n");
+    printf("Os dados apagados não poderão ser recuperados\n");
+    printf("⚠️  Deseja continuar? (S/N): ");
+    
+    char confirmation[10];
+    if (!readLine(confirmation, sizeof(confirmation))) {
+        return;
+    }
+
+    if (toupper(confirmation[0]) != 'S') {
+        printf("Operação cancelada.\n");
+        return;
+    }
+
+    if (compactDatabase()) {
+        printf("✅ Banco de dados compactado com sucesso!\n");
+    } else {
+        printf("❌ Erro durante a compactação do banco de dados.\n");
+    }
+}

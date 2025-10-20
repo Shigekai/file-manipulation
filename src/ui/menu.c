@@ -19,6 +19,7 @@ void startMenu(void) {
         printf("│ 2) Listar imagens    │\n");
         printf("│ 3) Exportar imagem   │\n");
         printf("│ 4) Deletar imagem    │\n");
+        printf("│ 5) Compactar banco   │\n");
         printf("│ 0) Sair              │\n");
         printf("└──────────────────────┘\n");
         printf("Escolha: ");
@@ -51,7 +52,11 @@ void startMenu(void) {
             case 4:
                 commandDelete();
                 break;
-                
+            
+            case 5:
+                commandCompact();
+                break;
+
             default:
                 printf("❌ Opção inválida. Tente novamente.\n");
                 break;

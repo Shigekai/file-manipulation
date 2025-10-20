@@ -8,3 +8,5 @@ int addData(const uint8_t *data, uint32_t bytes, uint64_t *offset_out);
 
 // Lê um bloco do store no offset/size para buf (buf deve existir e ter size bytes)
 int readData(uint64_t offset, uint32_t size, uint8_t *buf);
+
+int compactDatabase(void);

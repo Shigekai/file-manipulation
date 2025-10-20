@@ -90,7 +90,8 @@ void listAllData(void) {
     fclose(file);
 }
 
-// E então na função deleteByName:
+// Esta função marca uma imagem como deletada
+// Na prática, é um soft_delete, pois os arquivos são recuperáveis
 bool deleteByName(const char *name){
     FILE *file = fopen(INDEX_PATH, "r+b");
     if(!file){

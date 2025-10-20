@@ -22,14 +22,15 @@
 #define INDEX_PATH "bin/index.bin"
 
 typedef struct {
-    uint64_t offset;   // chave primária (posição em database.bin)
-    uint32_t size;     // metadados de bytes de pixel
-    uint32_t width;    // metadados de largura
-    uint32_t height;   // metadados de altura
-    uint16_t maxValue;   // metadados de valor máximo
-    uint8_t  bpp;      // metadados de bits por pixel
-    bool isAvailable; // flag para controle de soft delete (1 = disponível, 0 = deletado)
-    char    *name;     // chave secundária
+    uint64_t offset;      // chave primária (posição em database.bin)
+    uint32_t size;        // tamanho original antes da compressão
+    uint32_t compressedSize; // tamanho após compressão
+    uint32_t width;       // metadados de largura
+    uint32_t height;      // metadados de altura
+    uint16_t maxValue;    // metadados de valor máximo
+    uint8_t  bpp;         // metadados de bits por pixel
+    bool isAvailable;     // flag para controle de soft delete
+    char    *name;        // chave secundária
 } IImage;
 
 #endif //IMGDB_H

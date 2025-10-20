@@ -33,6 +33,7 @@ static int readNextData(FILE *file, IImage *image, long *isAvailablePos) {
     
     if (!readField(file, &image->offset, sizeof(uint64_t)) ||
         !readField(file, &image->size,   sizeof(uint32_t)) ||
+        !readField(file, &image->compressedSize, sizeof(uint32_t)) ||
         !readField(file, &image->width,  sizeof(uint32_t)) ||
         !readField(file, &image->height, sizeof(uint32_t)) ||
         !readField(file, &image->maxValue, sizeof(uint16_t)) ||

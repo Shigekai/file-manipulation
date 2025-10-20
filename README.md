@@ -23,7 +23,7 @@ make clean
 mkdir -p exec
 gcc -Wall -Wextra -std=c11 -O2 -D_FILE_OFFSET_BITS=64 \
     -Iheaders -Isrc/database -Isrc/index -Isrc/io \
-    -Isrc/filters -Isrc/handleImages -Isrc/ui \
+    -Isrc/filters -Isrc/handleImages -Isrc/ui -Isrc/compression \
     main.c \
     src/database/database.c \
     src/index/index.c \
@@ -31,6 +31,8 @@ gcc -Wall -Wextra -std=c11 -O2 -D_FILE_OFFSET_BITS=64 \
     src/handleImages/filters.c \
     src/handleImages/handleImages.c \
     src/ui/menu.c \
+    src/compression/encode.c \
+    src/compression/decode.c \
     -o exec/imageDatabase
 ```
 

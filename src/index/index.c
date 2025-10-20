@@ -2,6 +2,7 @@
 #include "indexHandlers.c"
 #include "stdbool.h"
 
+
 //métodos públicos que manipulam o arquivo de índice do banco de dados
 
 
@@ -23,6 +24,7 @@ int addDataKey(const char *name, const IImage *image) {
         fwrite(name, 1, nameLength, indexFile) == nameLength    &&
         writeField(indexFile, &image->offset, sizeof(uint64_t)) &&
         writeField(indexFile, &image->size,   sizeof(uint32_t)) &&
+        writeField(indexFile, &image->compressedSize, sizeof(uint32_t)) &&
         writeField(indexFile, &image->width,  sizeof(uint32_t)) &&
         writeField(indexFile, &image->height, sizeof(uint32_t)) &&
         writeField(indexFile, &image->maxValue, sizeof(uint16_t)) &&

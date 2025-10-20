@@ -63,7 +63,7 @@ static int readPGMHeader(FILE *file, int *isP5, uint32_t *width, uint32_t *heigh
     return 1;
 }
 
-// Lê dados de imagem P2
+// Lê dados de imagem P2 e transforma em binário P5
 static int readP2Data(FILE *file, uint8_t *buffer, uint32_t width, 
                      uint32_t height, uint8_t bytesPerPixel) {
     const uint64_t totalPixels = (uint64_t)width * height;

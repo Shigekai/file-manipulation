@@ -1,7 +1,7 @@
 #include "pgm.h"
 #include "pgmHandlers.c"
 
-//Essa função lê um arquivo PGM (P2 ou P5) e retorna os dados da imagem em formato P5 (binário)
+//Essa função lê um arquivo PGM (P2 ou P5) e retorna os dados da imagem em formato binário
 // e o aloca em um buffer
 int loadPGM(const char *path, uint32_t *width, uint32_t *height, uint32_t *maxValue, uint8_t **data, uint32_t *bytes, uint8_t *bytesPerPixel) {
     FILE *file = fopen(path, "rb");

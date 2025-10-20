@@ -1,5 +1,7 @@
 #include "database.h"
 #include "indexHandlers.c"
+#include "decode.h"
+#include "encode.h"
 //Observação: usado fseeko/ftello em vez de fseek/ftell para garantir uma abordagem moderna =)
 
 //Garante que o arquivo binário pôde ser aberto/criado com sucesso...
@@ -34,28 +36,40 @@ void ensureBin(void) {
 
 //Grava o arquivo no database, no final do arquivo, e retorna o offset onde foi gravado
 int addData(const uint8_t *data, uint32_t bytes, uint64_t *offset_out) {
+    uint32_t compressedSize = 0;
+    uint8_t *compressedData = encode(data, bytes, &compressedSize);
+    
+    if (!compressedData) {
+        fprintf(stderr, "Erro ao comprimir dados\n");
+        return 0;
+    }
+    
     FILE *databaseFile = fopen(DATABASE_PATH, "ab+");
     if (!databaseFile) {
         fprintf(stderr, "Erro ao abrir %s: %s\n", DATABASE_PATH, strerror(errno));
+        free(compressedData);
         return 0;
     }
     
     if (fseeko(databaseFile, 0, SEEK_END) != 0) {
         fclose(databaseFile);
+        free(compressedData);
         return 0;
     }
     
     off_t offset = ftello(databaseFile);
     if (offset == -1) {
         fclose(databaseFile);
+        free(compressedData);
         return 0;
     }
     
     *offset_out = (uint64_t)offset;
-    size_t wr = fwrite(data, 1, bytes, databaseFile);
+    size_t write = fwrite(compressedData, 1, compressedSize, databaseFile);
     fclose(databaseFile);
+    free(compressedData);
     
-    return wr == bytes;
+    return write == compressedSize;
 }
 
 //Lê o arquivo no database, guarda em buffer
@@ -72,10 +86,37 @@ int readData(uint64_t offset, uint32_t size, uint8_t *buffer) {
         return 0;
     }
     
-    size_t fileRead = fread(buffer, 1, size, databaseFile);
+    // Primeiro, lemos os dados comprimidos em um buffer temporário
+    uint8_t *compressedBuffer = malloc(size);
+    if (!compressedBuffer) {
+        fprintf(stderr, "Erro ao alocar memória para buffer comprimido\n");
+        fclose(databaseFile);
+        return 0;
+    }
+    
+    size_t fileRead = fread(compressedBuffer, 1, size, databaseFile);
     fclose(databaseFile);
     
-    return fileRead == size;
+    if (fileRead != size) {
+        free(compressedBuffer);
+        return 0;
+    }
+    
+    // Aplicar descompressão
+    uint32_t decodedSize = 0;
+    uint8_t *decodedData = decode(compressedBuffer, size, &decodedSize);
+    free(compressedBuffer);
+    
+    if (!decodedData) {
+        fprintf(stderr, "Erro ao descomprimir dados\n");
+        return 0;
+    }
+    
+    // Copiar dados descomprimidos para o buffer de saída
+    memcpy(buffer, decodedData, decodedSize);
+    free(decodedData);
+    
+    return 1;
 }
 
 

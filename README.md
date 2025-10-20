@@ -20,6 +20,7 @@ make clean
 ### Compilação
 
 ```bash
+mkdir -p exec
 gcc -Wall -Wextra -std=c11 -O2 -D_FILE_OFFSET_BITS=64 \
     -Iheaders -Isrc/database -Isrc/index -Isrc/io \
     -Isrc/filters -Isrc/handleImages -Isrc/ui \

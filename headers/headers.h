@@ -13,6 +13,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <errno.h>
+#include <stdbool.h>
 
 #include <sys/stat.h>
 #define MKDIR(path) mkdir(path, 0755)
@@ -27,6 +28,7 @@ typedef struct {
     uint32_t height;   // metadados de altura
     uint16_t maxValue;   // metadados de valor máximo
     uint8_t  bpp;      // metadados de bits por pixel
+    bool isAvailable; // flag para controle de soft delete (1 = disponível, 0 = deletado)
     char    *name;     // chave secundária
 } IImage;
 

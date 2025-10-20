@@ -13,7 +13,8 @@ static int readField(FILE *file, void *data, size_t size) {
 }
 
 // Lê próximo registro do índice
-static int readNextData(FILE *file, IImage *image) {
+// Adicionamos um parâmetro para retornar a posição do campo isAvailable
+static int readNextData(FILE *file, IImage *image, long *isAvailablePos) {
     uint16_t name_len;
     
     if (!readField(file, &name_len, sizeof(uint16_t))) {
@@ -40,12 +41,22 @@ static int readNextData(FILE *file, IImage *image) {
         return 0;
     }
     
+    if (isAvailablePos) {
+        *isAvailablePos = ftello(file);
+    }
+    
+    if (!readField(file, &image->isAvailable, sizeof(bool))) {
+        free(name);
+        return 0;
+    }
+    
     return 1;
 }
 
 static void freeData(IImage *image) {
     if (image && image->name) {
         free(image->name);
-        image->name = NULL;
+        image->name = NULL;  
     }
 }
+

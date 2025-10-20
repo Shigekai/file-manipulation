@@ -18,6 +18,7 @@ void startMenu(void) {
         printf("│ 1) Importar imagem   │\n");
         printf("│ 2) Listar imagens    │\n");
         printf("│ 3) Exportar imagem   │\n");
+        printf("│ 4) Deletar imagem    │\n");
         printf("│ 0) Sair              │\n");
         printf("└──────────────────────┘\n");
         printf("Escolha: ");
@@ -45,6 +46,10 @@ void startMenu(void) {
                 
             case 3:
                 commandExport();
+                break;
+                
+            case 4:
+                commandDelete();
                 break;
                 
             default:

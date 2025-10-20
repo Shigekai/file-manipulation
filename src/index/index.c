@@ -1,5 +1,6 @@
 #include "index.h"
 #include "indexHandlers.c"
+#include "stdbool.h"
 
 //métodos públicos que manipulam o arquivo de índice do banco de dados
 
@@ -15,6 +16,8 @@ int addDataKey(const char *name, const IImage *image) {
     }
     
     uint16_t nameLength = (uint16_t)strlen(name);
+    bool available = true;
+
     int success = 
         writeField(indexFile, &nameLength,  sizeof(uint16_t)) &&
         fwrite(name, 1, nameLength, indexFile) == nameLength    &&
@@ -23,7 +26,8 @@ int addDataKey(const char *name, const IImage *image) {
         writeField(indexFile, &image->width,  sizeof(uint32_t)) &&
         writeField(indexFile, &image->height, sizeof(uint32_t)) &&
         writeField(indexFile, &image->maxValue, sizeof(uint16_t)) &&
-        writeField(indexFile, &image->bpp,    sizeof(uint8_t));
+        writeField(indexFile, &image->bpp,    sizeof(uint8_t)) &&
+        writeField(indexFile, &available,    sizeof(uint8_t));
     
     fclose(indexFile);
     return success;
@@ -37,14 +41,14 @@ int findByName(const char *name, IImage *out) {
         return 0; 
     }
     
-    IImage entry;
-    while (readNextData(file, &entry)) {
-        if (strcmp(entry.name, name) == 0) {
-            *out = entry;
+    IImage image;
+    while (readNextData(file, &image, NULL)) {
+        if (image.isAvailable && strcmp(image.name, name) == 0) {
+            *out = image;
             fclose(file);
             return 1; 
         }
-        freeData(&entry);
+        freeData(&image);
     }
     
     fclose(file);
@@ -63,16 +67,18 @@ void listAllData(void) {
     printf("║              IMAGENS CADASTRADAS                       ║\n");
     printf("╚════════════════════════════════════════════════════════╝\n\n");
     
-    IImage entry;
+    IImage image;
     int count = 0;
     
-    while (readNextData(file, &entry)) {
-        printf("  %d) %s\n", ++count, entry.name);
-        printf("     Dimensões: %ux%u | maxValue: %u | BPP: %u\n",
-               entry.width, entry.height, entry.maxValue, entry.bpp);
-        printf("     Offset: %llu | Tamanho: %u bytes\n\n",
-               (unsigned long long)entry.offset, entry.size);
-        freeData(&entry);
+    while (readNextData(file, &image, NULL)) {
+        if(image.isAvailable) {
+            printf("  %d) %s\n", ++count, image.name);
+            printf("     Dimensões: %ux%u | maxValue: %u | BPP: %u\n",
+                   image.width, image.height, image.maxValue, image.bpp);
+            printf("     Offset: %llu | Tamanho: %u bytes\n\n",
+                   (unsigned long long)image.offset, image.size);
+        }
+        freeData(&image);
     }
     
     if (count == 0) {
@@ -82,4 +88,40 @@ void listAllData(void) {
     }
     
     fclose(file);
+}
+
+// E então na função deleteByName:
+bool deleteByName(const char *name){
+    FILE *file = fopen(INDEX_PATH, "r+b");
+    if(!file){
+        return false;
+    }
+
+    IImage currentImage;
+    bool found = false;
+    long isAvailablePos;
+
+    while (!found){
+        if(!readNextData(file, &currentImage, &isAvailablePos)){
+            break;
+        }
+
+        if(strcmp(currentImage.name, name) == 0) {
+            found = true;
+            
+            fseeko(file, isAvailablePos, SEEK_SET);
+            
+            bool notAvailable = false;
+            writeField(file, &notAvailable, sizeof(bool));
+            
+            freeData(&currentImage);
+            fclose(file);
+            return true;
+        } else {
+            freeData(&currentImage);
+        }
+    }
+
+    fclose(file);
+    return false;
 }

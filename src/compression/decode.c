@@ -30,7 +30,10 @@ uint8_t* decode(const uint8_t* encoded, uint32_t encodedSize, uint32_t* decodedS
             decoded[decIdx++] = currentSymbol;
         }
         
-        currentSymbol = !currentSymbol;
+        if (i + 1 < encodedSize) {
+            currentSymbol = encoded[i + 1];
+            i++;
+        }
     }
     
     *decodedSize = totalSize;

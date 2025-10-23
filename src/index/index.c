@@ -10,49 +10,39 @@
 //Veja mais sobre a tipagem de image em headers.h
 int addDataKey(const char *name, const IImage *image) {
     FILE *indexFile = fopen(INDEX_PATH, "ab");
-    if (!indexFile) {
-        perror("Erro ao abrir índice");
+    if(!indexFile){
+        perror("Erro ao abrir o arquivo de índice");
         return 0;
-    }
-    
-    uint16_t nameLength = (uint16_t)strlen(name);
-    bool available = true;
+    };
 
-    int success = 
-        writeField(indexFile, &nameLength,  sizeof(uint16_t)) &&
-        fwrite(name, 1, nameLength, indexFile) == nameLength    &&
-        writeField(indexFile, &image->offset, sizeof(uint64_t)) &&
-        writeField(indexFile, &image->size,   sizeof(uint32_t)) &&
-        writeField(indexFile, &image->width,  sizeof(uint32_t)) &&
-        writeField(indexFile, &image->height, sizeof(uint32_t)) &&
-        writeField(indexFile, &image->maxValue, sizeof(uint16_t)) &&
-        writeField(indexFile, &image->bpp,    sizeof(uint8_t)) &&
-        writeField(indexFile, &available,    sizeof(uint8_t));
-    
+    IImage newImage = *image;
+    newImage.isAvailable = true;
+    strncpy(newImage.name, name, MAX_NAME_LENGTH);
+    newImage.name[MAX_NAME_LENGTH] = '\0';
     fclose(indexFile);
-    return success;
+
+    return writeRecord(indexFile, &newImage);
 }
 
 //Procura no arquivo de índice por um nome.
 //Usa o algoritmo simples de busca sequencial O(N).
 int findByName(const char *name, IImage *out) {
     FILE *file = fopen(INDEX_PATH, "rb");
-    if (!file) {
-        return 0; 
+    if(!file){
+        return 0;
     }
-    
-    IImage image;
-    while (readNextData(file, &image, NULL)) {
-        if (image.isAvailable && strcmp(image.name, name) == 0) {
-            *out = image;
+
+    IImage currentImage;
+    while(readRecord(file, &currentImage)){
+        if(currentImage.isAvailable && strcmp(currentImage.name, name) == 0){
+            *out = currentImage;
             fclose(file);
-            return 1; 
+            return 1;
         }
-        freeData(&image);
     }
-    
+
     fclose(file);
-    return 0; 
+    return 0;
 }
 
 //Lista todas as imagens com uma saída amigável para o usuário.
@@ -70,15 +60,14 @@ void listAllData(void) {
     IImage image;
     int count = 0;
     
-    while (readNextData(file, &image, NULL)) {
-        if(image.isAvailable) {
+    while (readRecord(file, &image)) {
+        if (image.isAvailable) {
             printf("  %d) %s\n", ++count, image.name);
             printf("     Dimensões: %ux%u | maxValue: %u | BPP: %u\n",
                    image.width, image.height, image.maxValue, image.bpp);
             printf("     Offset: %llu | Tamanho: %u bytes\n\n",
                    (unsigned long long)image.offset, image.size);
         }
-        freeData(&image);
     }
     
     if (count == 0) {
@@ -92,37 +81,29 @@ void listAllData(void) {
 
 // Esta função marca uma imagem como deletada
 // Na prática, é um soft_delete, pois os arquivos são recuperáveis
-bool deleteByName(const char *name){
+bool deleteByName(const char *name) {
     FILE *file = fopen(INDEX_PATH, "r+b");
-    if(!file){
+    if (!file) {
         return false;
     }
 
-    IImage currentImage;
+    IImage image;
+    long recordPosition = 0;
     bool found = false;
-    long isAvailablePos;
 
-    while (!found){
-        if(!readNextData(file, &currentImage, &isAvailablePos)){
+    while (readRecord(file, &image)) {
+        if (image.isAvailable && strcmp(image.name, name) == 0) {
+            found = true;
+            fseeko(file, recordPosition, SEEK_SET);
+            image.isAvailable = false;
+            
+            writeRecord(file, &image);
             break;
         }
-
-        if(strcmp(currentImage.name, name) == 0) {
-            found = true;
-            
-            fseeko(file, isAvailablePos, SEEK_SET);
-            
-            bool notAvailable = false;
-            writeField(file, &notAvailable, sizeof(bool));
-            
-            freeData(&currentImage);
-            fclose(file);
-            return true;
-        } else {
-            freeData(&currentImage);
-        }
+        
+        recordPosition = ftello(file);
     }
 
     fclose(file);
-    return false;
+    return found;
 }

@@ -23,7 +23,7 @@ static void clearInputBuffer(void) {
 }
 
 
-// Comando: Importar imagem PGM para o banco
+// Importar imagem PGM para o banco
 static void commandImport(void) {
     char path[1024], name[512];
     
@@ -42,6 +42,11 @@ static void commandImport(void) {
     } 
     if (name[0] == '\0') {
         printf("❌ Nome não pode ser vazio.\n");
+        return;
+    }
+    
+    if (strlen(name) >= 256) {
+        printf("❌ Nome muito longo (máximo: 255 caracteres).\n");
         return;
     }
 
@@ -70,7 +75,7 @@ static void commandImport(void) {
         .height = height,
         .maxValue = (uint16_t)maxValue,
         .bpp = bytesPerPixel,
-        .name = NULL 
+        .isAvailable = true
     };
 
     if (!addDataKey(name, &image)) {
@@ -84,8 +89,7 @@ static void commandImport(void) {
     printf("   Offset: %llu | Tamanho: %u bytes\n",
            (unsigned long long)offset, bytes);
 }
-
-// Comando: Exportar imagem por nome
+// Exportar imagem do banco para arquivo PGM
 static void commandExport(void) {
     char name[512];
     
@@ -114,7 +118,6 @@ static void commandExport(void) {
     int modeChoice = 0;
     if (scanf("%d", &modeChoice) != 1) {
         printf("❌ Entrada inválida.\n");
-        if (image.name) free(image.name);
         clearInputBuffer();
         return;
     }
@@ -122,7 +125,6 @@ static void commandExport(void) {
     
     if (modeChoice < 0 || modeChoice > 2) {
         printf("❌ Opção inválida.\n");
-        if (image.name) free(image.name);
         return;
     }
     
@@ -133,29 +135,25 @@ static void commandExport(void) {
         printf("Valor de limiar (0 a %u): ", image.maxValue);
         if (scanf("%u", &thresholdValue) != 1) {
             printf("❌ Entrada inválida.\n");
-            if (image.name) free(image.name);
             clearInputBuffer();
             return;
         }
         clearInputBuffer();
         
         if (thresholdValue > image.maxValue) {
-            printf("⚠️  Ajustando threshold de %u para %u (maxval)\n",
-                   thresholdValue, image.maxValue);
-            thresholdValue = image.maxValue;
+            printf("❌ Valor de limiar inválido.\n");
+            return;
         }
     }
 
     char outputPath[1024];
     printf("Arquivo de saída (.pgm): ");
     if (!readLine(outputPath, sizeof(outputPath))) {
-        if (image.name) free(image.name);
         return;
     }
     
     if (outputPath[0] == '\0') {
         printf("❌ Caminho de saída não pode ser vazio.\n");
-        if (image.name) free(image.name);
         return;
     }
 
@@ -164,16 +162,8 @@ static void commandExport(void) {
     } else {
         printf("❌ Falha na exportação.\n");
     }
-    
-    if (image.name) {
-        free(image.name);
-    }
 }
-
-static void commandList(void) {
-    listAllData();
-}
-
+// Deletar imagem do banco
 static void commandDelete(void) {
     char name[512];
     
@@ -192,10 +182,6 @@ static void commandDelete(void) {
         printf("❌ Imagem '%s' não encontrada.\n", name);
         return;
     }
-    
-    if (image.name) {
-        free(image.name);
-    }
 
     printf("⚠️  Tem certeza que deseja deletar '%s'? (S/N): ", name);
     char confirmation[10];
@@ -209,12 +195,12 @@ static void commandDelete(void) {
     }
 
     if (deleteByName(name)) {
-        printf("Imagem '%s' deletada com sucesso!\n", name);
+        printf("✅ Imagem '%s' deletada com sucesso!\n", name);
     } else {
-        printf("Falha ao deletar imagem!\n");
+        printf("❌ Falha ao deletar imagem!\n");
     }
 }
-
+// Compactar banco de dados
 static void commandCompact(void) {
     printf("Iniciando compactação do banco de dados...\n");
     printf("Este procedimento é irreversível\n");

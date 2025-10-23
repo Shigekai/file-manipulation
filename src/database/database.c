@@ -132,68 +132,40 @@ int compactDatabase(void) {
     uint64_t newOffset = 0;
     
     IImage image;
-    long isAvailablePos;
-    
-    while (readNextData(sourceIndex, &image, &isAvailablePos)) {
+    while (readRecord(sourceIndex, &image)) {
+
         if (image.isAvailable) {
-            if (fseeko(sourceDatabase, (off_t)image.offset, SEEK_SET) != 0) {
-                fprintf(stderr, "Erro ao posicionar no banco de dados de origem\n");
+            uint8_t *buffer = malloc(image.size);
+            if (!buffer) {
+                fprintf(stderr, "Erro ao alocar memória para compactação\n");
                 break;
             }
             
-            uint32_t bytesRemaining = image.size;
-            uint32_t totalCopied = 0;
-            
-            while (bytesRemaining > 0) {
-                size_t blockSize = (bytesRemaining < BUFFER_SIZE) ? bytesRemaining : BUFFER_SIZE;
-                
-                size_t bytesRead = fread(buffer, 1, blockSize, sourceDatabase);
-                if (bytesRead != blockSize) {
-                    fprintf(stderr, "Erro ao ler do banco de dados de origem\n");
-                    break;
-                }
-                
-                size_t bytesWritten = fwrite(buffer, 1, bytesRead, dstDatabase);
-                if (bytesWritten != bytesRead) {
-                    fprintf(stderr, "Erro ao escrever no banco de dados temporário\n");
-                    break;
-                }
-                
-                bytesRemaining -= (uint32_t)bytesWritten;
-                totalCopied += (uint32_t)bytesWritten;
+            if (fseeko(sourceDatabase, (off_t)image.offset, SEEK_SET) != 0 ||
+                fread(buffer, 1, image.size, sourceDatabase) != image.size) {
+                fprintf(stderr, "Erro ao ler dados do database\n");
+                free(buffer);
+                break;
             }
             
-            if (totalCopied == image.size) {
-                uint64_t oldOffset = image.offset;
-                image.offset = newOffset;
-                newOffset += image.size;
-                
-                uint16_t nameLength = (uint16_t)strlen(image.name);
-                bool available = true;
-
-                int success = 
-                    writeField(destinationIndex, &nameLength, sizeof(uint16_t)) &&
-                    fwrite(image.name, 1, nameLength, destinationIndex) == nameLength &&
-                    writeField(destinationIndex, &image.offset, sizeof(uint64_t)) &&
-                    writeField(destinationIndex, &image.size, sizeof(uint32_t)) &&
-                    writeField(destinationIndex, &image.width, sizeof(uint32_t)) &&
-                    writeField(destinationIndex, &image.height, sizeof(uint32_t)) &&
-                    writeField(destinationIndex, &image.maxValue, sizeof(uint16_t)) &&
-                    writeField(destinationIndex, &image.bpp, sizeof(uint8_t)) &&
-                    writeField(destinationIndex, &available, sizeof(bool));
-                
-                if (success) {
-                    copied++;
-                } else {
-                    fprintf(stderr, "Erro ao escrever no índice temporário\n");
-                    break;
-                }
+            off_t newOffset = ftello(dstDatabase);
+            if (newOffset == -1 || 
+                fwrite(buffer, 1, image.size, dstDatabase) != image.size) {
+                fprintf(stderr, "Erro ao escrever no novo database\n");
+                free(buffer);
+                break;
             }
-        }
-        
-        if (image.name) {
-            free(image.name);
-            image.name = NULL;
+            
+            free(buffer);
+            
+            image.offset = (uint64_t)newOffset;
+            
+            if (!writeRecord(destinationIndex, &image)) {  // SIMPLIFICADO!
+                fprintf(stderr, "Erro ao escrever no índice temporário\n");
+                break;
+            }
+            
+            copied++;
         }
     }
     

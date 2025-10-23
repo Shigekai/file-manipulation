@@ -29,7 +29,10 @@ typedef struct {
     uint16_t maxValue;   // metadados de valor máximo
     uint8_t  bpp;      // metadados de bits por pixel
     bool isAvailable; // flag para controle de soft delete (1 = disponível, 0 = deletado)
-    char    *name;     // chave secundária
+    char name[256];     // chave secundária
 } IImage;
+
+#define IIMAGE_SIZE sizeof(IImage)
+#define MAX_NAME_LENGTH 255
 
 #endif //IMGDB_H

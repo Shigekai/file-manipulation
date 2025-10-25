@@ -15,7 +15,8 @@ static int compareImagesByName(const void *firstImage, const void *secondImage) 
 //Pois isso é essencial para o kway merge depois!
 //Observação --> malloc e free fora do while para otimização.
 //Observação --> o buffer aponta para o mesmo endereço de memória durante todo o processo.
-//Observação --> o que muda é o valor. 
+//Observação --> o que muda é o valor.
+//Retornamos o número de partições criadas
 static int createSortedPartitions(const char *inputPath, int recordsPerPartition){
     FILE *file = fopen(inputPath, "rb");
     IImage *buffer = malloc(sizeof(IImage) * recordsPerPartition);
@@ -63,4 +64,75 @@ static int findMinPartition(PartitionReader *readers, int totalPartitions){
 
     }
     return minIndex;
+}
+
+//Lê a próxima partição do arquivo
+static void advancePartition(PartitionReader *reader){
+    if(fread(&reader->currentImage, sizeof(IImage), 1, reader->file) == 1){
+        reader->hasData = true;
+    } else {
+        reader->hasData = false;
+    }
+}
+
+static int kWayMerge(int totalPartitions, int partitionsToMerge, const char *outputPath){
+    FILE *output = fopen(outputPath, "wb");
+
+    int currentPartition = 0;
+
+    while(currentPartition < totalPartitions) {
+        int partitionsInThisRound = (totalPartitions - currentPartition < partitionsToMerge)
+        ? (totalPartitions - currentPartition)
+        : partitionsToMerge;
+
+        PartitionReader *readers = malloc(partitionsInThisRound * sizeof(PartitionReader));
+
+        for (int i = 0; i < partitionsInThisRound; i++){
+            char partitionName[256];
+            snprintf(partitionName, sizeof(partitionName),
+            "bin/partitions/partition_%d.bin", currentPartition + i);
+            
+            readers[i].file = fopen(partitionName, "rb");
+            if(!readers[i].file){
+                perror("Erro ao abrir partição para leitura");
+                free(readers);
+                fclose(output);
+                return 0;
+            }
+
+            readers[i].partitionId = currentPartition + i;
+            advancePartition(&readers[i]);
+        }
+
+        int activePartitions = partitionsInThisRound;
+        while(activePartitions > 0){
+            int minIndex = findMinPartition(readers, partitionsInThisRound);
+            if(minIndex == -1) break;
+
+            fwrite(&readers[minIndex].currentImage, sizeof(IImage), 1, output);
+            advancePartition(&readers[minIndex]);
+
+            if(!readers[minIndex].hasData){
+                activePartitions--;
+            }
+        }
+
+        for (int i = 0; i < partitionsInThisRound; i++) {
+            fclose(readers[i].file);
+        }
+
+        free(readers);
+        currentPartition += partitionsInThisRound;
+    }
+
+    fclose(output);
+    return 1;
+}
+
+static void cleanupPartitions(int partitionCount) {
+    for (int i = 0; i < partitionCount; i++) {
+        char partitionName[256];
+        snprintf(partitionName, sizeof(partitionName), "bin/partitions/partition_%d.bin", i);
+        remove(partitionName);
+    }
 }

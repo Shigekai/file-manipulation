@@ -3,30 +3,28 @@
 //Observação: usado fseeko/ftello em vez de fseek/ftell para garantir uma abordagem moderna =)
 
 //Garante que o arquivo binário pôde ser aberto/criado com sucesso...
+//Garante a criação da pasta bin/ e bin/partitions/
+//E dos arquivos binários necessários
 void ensureBin(void) {
+    MKDIR("bin");
+    MKDIR("bin/partitions");
+    
     FILE *databaseFile = fopen(DATABASE_PATH, "ab");
     if (!databaseFile) {
-        MKDIR("bin");
-        databaseFile = fopen(DATABASE_PATH, "ab");
-        if (!databaseFile) {
-            fprintf(stderr, "Erro ao criar/abrir %s: %s\n", DATABASE_PATH, strerror(errno));
-            exit(1);
-        }
+        fprintf(stderr, "Erro ao criar/abrir %s: %s\n", 
+                DATABASE_PATH, strerror(errno));
+        exit(1);
     }
     fclose(databaseFile);
     
-    databaseFile = fopen(INDEX_PATH, "ab");
-    if (!databaseFile) {
-        MKDIR("bin");
-        databaseFile = fopen(INDEX_PATH, "ab");
-        if (!databaseFile) {
-            fprintf(stderr, "Erro ao criar/abrir %s: %s\n", INDEX_PATH, strerror(errno));
-            exit(1);
-        }
+    FILE *indexFile = fopen(INDEX_PATH, "ab");
+    if (!indexFile) {
+        fprintf(stderr, "Erro ao criar/abrir %s: %s\n", 
+                INDEX_PATH, strerror(errno));
+        exit(1);
     }
-    fclose(databaseFile);
+    fclose(indexFile);
 }
-
 // Para não ter problema de tamanhos em diferentes platformas, usei tipos inteiros com tamanhos fixos:
 //uint8_t  → 8 bits -> 1 byte
 //uint32_t → 32 bits -> 4 bytes

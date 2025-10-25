@@ -15,4 +15,7 @@ void listAllData(void);
 
 bool deleteByName(const char *name);
 
+// Depura o conteúdo do índice
+void dumpIndex(const char *label);
+
 #endif // INDEX_H

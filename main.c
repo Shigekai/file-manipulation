@@ -6,6 +6,6 @@
 
 int main(void) {
     ensureBin();
-    startMenu();
+    showMenu();
     return 0;
 }

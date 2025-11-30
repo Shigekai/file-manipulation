@@ -5,7 +5,7 @@
 #include "index.h"
 #include "handleImages.h"
 #include "externalSort.h"
-#include "externalSort.h"
+#include "../algos/bTree.h"
 
 //Funções estáticas auxiliares do menu
 
@@ -103,6 +103,20 @@ static void commandImport(void) {
     FilterMode mode;
     uint32_t thresholdValue;
     if (!printFilters((uint16_t)maxValue, &mode, &thresholdValue)) {
+        free(data);
+        return;
+    }
+
+    IImage existing;
+    if (searchBTree(name, mode, thresholdValue, &existing)) {
+        printf("Já existe uma imagem com nome '%s'", name);
+        if (mode == FILTER_NONE) {
+            printf(" sem filtro.\n");
+        } else if (mode == FILTER_THRESHOLD) {
+            printf(" com limiarização (threshold=%u).\n", thresholdValue);
+        } else {
+            printf(" com filtro negativo.\n");
+        }
         free(data);
         return;
     }

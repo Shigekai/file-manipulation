@@ -387,13 +387,24 @@ static void traverseInOrder(uint64_t nodeOffset, bool isRoot) {
     
     for (int i = 0; i < node.keyCount; i++) {
         traverseInOrder(node.children[i], false);
-        
-        printf("Nome: %s | Filtro: %d", node.keys[i].name, node.keys[i].filterMode);
+    }
+    
+    printf("┌─────────────────────────────────────────────────────────┐\n");
+    printf("│ Página @%-10llu | %s | %d chave(s)          │\n", 
+           (unsigned long long)nodeOffset,
+           node.isLeaf ? "FOLHA  " : "INTERNO",
+           node.keyCount);
+    printf("├─────────────────────────────────────────────────────────┤\n");
+    
+    for (int i = 0; i < node.keyCount; i++) {
+        printf("│  • %s | Filtro: %d", node.keys[i].name, node.keys[i].filterMode);
         if (node.keys[i].filterMode == FILTER_THRESHOLD) {
             printf(" | Threshold: %u", node.keys[i].thresholdValue);
         }
         printf("\n");
     }
+    printf("└─────────────────────────────────────────────────────────┘\n\n");
+    
     traverseInOrder(node.children[node.keyCount], false);
 }
 
@@ -465,4 +476,47 @@ int searchByNameBTree(const char *name, IImage *results, int maxResults) {
     collectByName(g_btreeContext.header.rootOffset, name, results, maxResults, &count, true);
     
     return count;
+}
+
+
+// Função auxiliar recursiva para percorrer com callback
+static void traverseWithCallback(uint64_t nodeOffset, bool isRoot, 
+                                  BTreeCallback callback, void *userData) {
+    if (nodeOffset == 0) {
+        return;
+    }
+    
+    BTreeNode node;
+    if (isRoot) {
+        node = g_btreeContext.rootNode;
+    } else if (!readNode(g_btreeContext.file, nodeOffset, &node)) {
+        return;
+    }
+    
+    for (int i = 0; i < node.keyCount; i++) {
+        if (!node.isLeaf) {
+            traverseWithCallback(node.children[i], false, callback, userData);
+        }
+        
+        callback(&node.keys[i], userData);
+    }
+    
+    if (!node.isLeaf) {
+        traverseWithCallback(node.children[node.keyCount], false, callback, userData);
+    }
+}
+
+// Percorre toda a B-tree e executa callback para cada imagem
+void traverseBTree(BTreeCallback callback, void *userData) {
+    if (!g_btreeContext.isOpen) {
+        if (!openBTree()) {
+            return;
+        }
+    }
+    
+    if (g_btreeContext.header.rootOffset == 0) {
+        return;
+    }
+    
+    traverseWithCallback(g_btreeContext.header.rootOffset, true, callback, userData);
 }

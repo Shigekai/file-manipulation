@@ -1,5 +1,6 @@
 #include "database.h"
 #include "indexHandlers.c"
+#include "../algos/bTree.h"
 //Observação: usado fseeko/ftello em vez de fseek/ftell para garantir uma abordagem moderna =)
 
 //Garante que o arquivo binário pôde ser aberto/criado com sucesso...
@@ -76,110 +77,147 @@ int readData(uint64_t offset, uint32_t size, uint8_t *buffer) {
     return fileRead == size;
 }
 
+#include "../algos/bTree.h"
 
-// Compacta o banco de dados removendo entradas marcadas como deletadas
-// Retorna 1 se sucesso, 0 se falha
-int compactDatabase(void) {
-    // Caminhos para arquivos temporários
-    const char *TEMP_DATABASE_PATH = "bin/database_temp.bin";
-    const char *TEMP_INDEX_PATH = "bin/index_temp.bin";
-    
-    FILE *sourceIndex = fopen(INDEX_PATH, "rb");
-    if (!sourceIndex) {
-        fprintf(stderr, "Erro ao abrir arquivo de índice para compactação\n");
-        return 0;
-    }
-    
-    FILE *sourceDatabase = fopen(DATABASE_PATH, "rb");
-    if (!sourceDatabase) {
-        fprintf(stderr, "Erro ao abrir banco de dados para compactação\n");
-        fclose(sourceIndex);
-        return 0;
-    }
-    
-    FILE *destinationIndex = fopen(TEMP_INDEX_PATH, "wb");
-    if (!destinationIndex) {
-        fprintf(stderr, "Erro ao criar índice temporário\n");
-        fclose(sourceIndex);
-        fclose(sourceDatabase);
-        return 0;
-    }
-    
-    FILE *dstDatabase = fopen(TEMP_DATABASE_PATH, "wb");
-    if (!dstDatabase) {
-        fprintf(stderr, "Erro ao criar banco de dados temporário\n");
-        fclose(sourceIndex);
-        fclose(sourceDatabase);
-        fclose(destinationIndex);
-        return 0;
-    }
+// Estrutura auxiliar para compactação
+typedef struct {
+    FILE *newDatabase;
+    FILE *oldDatabase;
+    FILE *newIndex;
+    int copied;
+    int errors;
+} CompactContext;
 
-
-    #define BUFFER_SIZE (64 * 1024) // 64 KB
-    uint8_t *buffer = malloc(BUFFER_SIZE);
+// Callback para compactar cada imagem da B-tree
+static void compactCallback(const IImage *image, void *userData) {
+    CompactContext *ctx = (CompactContext *)userData;
+    
+    uint8_t *buffer = malloc(image->size);
     if (!buffer) {
-        fprintf(stderr, "Erro ao alocar memória para buffer\n");
-        fclose(sourceIndex);
-        fclose(sourceDatabase);
-        fclose(destinationIndex);
-        fclose(dstDatabase);
-        return 0;
+        fprintf(stderr, "Erro ao alocar memória para compactação\n");
+        ctx->errors++;
+        return;
     }
-
-    int copied = 0;
-    uint64_t newOffset = 0;
     
-    IImage image;
-    while (readRecord(sourceIndex, &image)) {
-
-        if (image.isAvailable) {
-            uint8_t *buffer = malloc(image.size);
-            if (!buffer) {
-                fprintf(stderr, "Erro ao alocar memória para compactação\n");
-                break;
-            }
-            
-            if (fseeko(sourceDatabase, (off_t)image.offset, SEEK_SET) != 0 ||
-                fread(buffer, 1, image.size, sourceDatabase) != image.size) {
-                fprintf(stderr, "Erro ao ler dados do database\n");
-                free(buffer);
-                break;
-            }
-            
-            off_t newOffset = ftello(dstDatabase);
-            if (newOffset == -1 || 
-                fwrite(buffer, 1, image.size, dstDatabase) != image.size) {
-                fprintf(stderr, "Erro ao escrever no novo database\n");
-                free(buffer);
-                break;
-            }
-            
-            free(buffer);
-            
-            image.offset = (uint64_t)newOffset;
-            
-            if (!writeRecord(destinationIndex, &image)) {  // SIMPLIFICADO!
-                fprintf(stderr, "Erro ao escrever no índice temporário\n");
-                break;
-            }
-            
-            copied++;
-        }
+    if (fseeko(ctx->oldDatabase, (off_t)image->offset, SEEK_SET) != 0 ||
+        fread(buffer, 1, image->size, ctx->oldDatabase) != image->size) {
+        fprintf(stderr, "Erro ao ler dados do database\n");
+        free(buffer);
+        ctx->errors++;
+        return;
+    }
+    
+    off_t newOffset = ftello(ctx->newDatabase);
+    if (newOffset == -1) {
+        fprintf(stderr, "Erro ao obter offset\n");
+        free(buffer);
+        ctx->errors++;
+        return;
+    }
+    
+    if (fwrite(buffer, 1, image->size, ctx->newDatabase) != image->size) {
+        fprintf(stderr, "Erro ao escrever no novo database\n");
+        free(buffer);
+        ctx->errors++;
+        return;
     }
     
     free(buffer);
-    fclose(sourceIndex);
-    fclose(sourceDatabase);
-    fclose(destinationIndex);
-    fclose(dstDatabase);
     
-    if (remove(DATABASE_PATH) != 0 || remove(INDEX_PATH) != 0 ||
-        rename(TEMP_DATABASE_PATH, DATABASE_PATH) != 0 ||
-        rename(TEMP_INDEX_PATH, INDEX_PATH) != 0) {
-        fprintf(stderr, "Erro ao substituir arquivos originais\n");
+    IImage updatedImage = *image;
+    updatedImage.offset = (uint64_t)newOffset;
+    
+    if (fwrite(&updatedImage, sizeof(IImage), 1, ctx->newIndex) != 1) {
+        fprintf(stderr, "Erro ao escrever registro temporário\n");
+        ctx->errors++;
+        return;
+    }
+    
+    ctx->copied++;
+}
+
+int compactDatabase(void) {
+    const char *TEMP_DATABASE_PATH = "bin/database_temp.bin";
+    const char *TEMP_INDEX_PATH = "bin/index_temp.bin";
+    
+    if (!openBTree()) {
+        fprintf(stderr, "Erro ao abrir B-tree para compactação\n");
         return 0;
     }
     
-    printf("Compactação concluída: %d registros mantidos.\n", copied);
+    FILE *oldDatabase = fopen(DATABASE_PATH, "rb");
+    if (!oldDatabase) {
+        fprintf(stderr, "Erro ao abrir banco de dados para compactação\n");
+        return 0;
+    }
+    
+    FILE *newDatabase = fopen(TEMP_DATABASE_PATH, "wb");
+    if (!newDatabase) {
+        fprintf(stderr, "Erro ao criar banco de dados temporário\n");
+        fclose(oldDatabase);
+        return 0;
+    }
+    
+    FILE *tempIndex = fopen(TEMP_INDEX_PATH, "wb");
+    if (!tempIndex) {
+        fprintf(stderr, "Erro ao criar índice temporário\n");
+        fclose(oldDatabase);
+        fclose(newDatabase);
+        return 0;
+    }
+    
+    CompactContext ctx = {
+        .newDatabase = newDatabase,
+        .oldDatabase = oldDatabase,
+        .newIndex = tempIndex,
+        .copied = 0,
+        .errors = 0
+    };
+    
+    traverseBTree(compactCallback, &ctx);
+    
+    fclose(oldDatabase);
+    fclose(newDatabase);
+    fclose(tempIndex);
+    
+    if (ctx.errors > 0) {
+        fprintf(stderr, "Ocorreram %d erros durante a compactação\n", ctx.errors);
+        remove(TEMP_DATABASE_PATH);
+        remove(TEMP_INDEX_PATH);
+        return 0;
+    }
+    
+    closeBTree();
+
+    if (remove(DATABASE_PATH) != 0) {
+        fprintf(stderr, "Erro ao remover database antigo\n");
+        return 0;
+    }
+    if (rename(TEMP_DATABASE_PATH, DATABASE_PATH) != 0) {
+        fprintf(stderr, "Erro ao renomear database\n");
+        return 0;
+    }
+    
+    remove(INDEX_PATH);
+    initBTree();
+    
+    if (!openBTree()) {
+        fprintf(stderr, "Erro ao reabrir B-tree\n");
+        return 0;
+    }
+    
+    tempIndex = fopen(TEMP_INDEX_PATH, "rb");
+    if (tempIndex) {
+        IImage image;
+        while (fread(&image, sizeof(IImage), 1, tempIndex) == 1) {
+            insertBTree(&image);
+        }
+        fclose(tempIndex);
+    }
+    
+    remove(TEMP_INDEX_PATH);
+    
+    printf("Compactação concluída: %d registros copiados.\n", ctx.copied);
     return 1;
 }
+

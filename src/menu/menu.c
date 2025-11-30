@@ -17,15 +17,13 @@ void showMenu(void) {
         printf("║  1) Importar imagem                                    ║\n");
         printf("║  2) Exportar imagem                                    ║\n");
         printf("║  3) Listar imagens                                     ║\n");
-        printf("║  4) Deletar imagem                                     ║\n");
-        printf("║  5) Compactar banco de dados                           ║\n");
-        printf("║  6) Ordenar índice (Merge Sort Externo)                ║\n");
+        printf("║  4) Compactar banco de dados                           ║\n");
         printf("║  0) Sair                                               ║\n");
         printf("╚════════════════════════════════════════════════════════╝\n");
         printf("➤ Escolha uma opção: ");
         
         if (scanf("%d", &choice) != 1) {
-            printf("\n❌ Entrada inválida! Digite um número entre 0 e 6.\n");
+            printf("\n❌ Entrada inválida! Digite um número entre 0 e 4.\n");
             int c;
             while ((c = getchar()) != '\n' && c != EOF);
             continue;
@@ -57,10 +55,10 @@ void handleMenuChoice(int choice) {
         case 1: commandImport(); break;
         case 2: commandExport(); break;
         case 3: listBTree(); break;
-        case 5: commandCompact(); break;
+        case 4: commandCompact(); break;
         case 0: 
             break;
         default: 
-            printf("❌ Opção inválida! Escolha um número entre 0 e 6.\n");
+            printf("❌ Opção inválida! Escolha um número entre 0 e 4.\n");
     }
 }

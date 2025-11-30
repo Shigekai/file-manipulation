@@ -4,6 +4,7 @@
 #include "database.h"
 #include "handleImages.h"
 #include "../algos/bTree.h"
+#include "../handleImages/filters.h"
 
 //Funções estáticas auxiliares do menu
 
@@ -298,38 +299,5 @@ static void commandCompact(void) {
         printf("✅ Banco de dados compactado com sucesso!\n");
     } else {
         printf("❌ Erro durante a compactação do banco de dados.\n");
-    }
-}
-
-
-static void commandSort(void) {
-    printf("\n╔════════════════════════════════════════════════════════╗\n");
-    printf("║           ORDENAR ARQUIVO DE ÍNDICE                   ║\n");
-    printf("╚════════════════════════════════════════════════════════╝\n\n");
-    
-    int recordsPerPartition = 1000;  
-    int partitionsToMerge = 4;                       
-    
-    printf("Configurações:\n");
-    printf("  - Registros por partição: %d\n", recordsPerPartition);
-    printf("  - K-way merge: %d vias\n", partitionsToMerge);
-    printf("\nEste processo pode demorar. Continuar? (S/N): ");
-    
-    char confirmation[10];
-    if (!readLine(confirmation, sizeof(confirmation))) {
-        return;
-    }
-    
-    if (toupper(confirmation[0]) != 'S') {
-        printf("Operação cancelada.\n");
-        return;
-    }
-    dumpIndex("--- ÍNDICE ANTES DA ORDENAÇÃO ---\n\n\n");
-    if (externalSort(recordsPerPartition, partitionsToMerge)) {
-        dumpIndex("--- ÍNDICE DEPOIS DA ORDENAÇÃO ---\n\n\n");
-        printf("\n✅ Índice ordenado por nome com sucesso!\n");
-        printf("   Agora você pode usar busca binária para consultas mais rápidas.\n");
-    } else {
-        printf("\n❌ Falha ao ordenar índice.\n");
     }
 }

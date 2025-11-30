@@ -1,5 +1,4 @@
 #include "database.h"
-#include "indexHandlers.c"
 #include "../algos/bTree.h"
 //Observação: usado fseeko/ftello em vez de fseek/ftell para garantir uma abordagem moderna =)
 
@@ -18,13 +17,8 @@ void ensureBin(void) {
     }
     fclose(databaseFile);
     
-    FILE *indexFile = fopen(INDEX_PATH, "ab");
-    if (!indexFile) {
-        fprintf(stderr, "Erro ao criar/abrir %s: %s\n", 
-                INDEX_PATH, strerror(errno));
-        exit(1);
-    }
-    fclose(indexFile);
+    // Inicializa a B-tree (cria arquivo de índice se não existir)
+    initBTree();
 }
 // Para não ter problema de tamanhos em diferentes platformas, usei tipos inteiros com tamanhos fixos:
 //uint8_t  → 8 bits -> 1 byte

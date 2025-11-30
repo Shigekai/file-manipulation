@@ -1,6 +1,7 @@
 #include "handleImages.h"
 #include "database.h"
 #include "../io/pgm.h"
+#include "filters.h"
 #include "filters.c"
 
 //Essa função pega uma imagem do banco de dados (formato binário), com base no offset fornecido

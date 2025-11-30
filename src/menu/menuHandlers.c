@@ -280,42 +280,42 @@ static void commandExport(void) {
 }
 
 // Deletar imagem do banco
-static void commandDelete(void) {
-    char name[512];
+// static void commandDelete(void) {
+//     char name[512];
     
-    printf("Nome da imagem para deletar: ");
-    if (!readLine(name, sizeof(name))) {
-        return;
-    }
+//     printf("Nome da imagem para deletar: ");
+//     if (!readLine(name, sizeof(name))) {
+//         return;
+//     }
     
-    if (name[0] == '\0') {
-        printf("❌ Nome não pode ser vazio.\n");
-        return;
-    }
+//     if (name[0] == '\0') {
+//         printf("❌ Nome não pode ser vazio.\n");
+//         return;
+//     }
 
-    IImage image;
-    if (!findByName(name, &image)) {
-        printf("❌ Imagem '%s' não encontrada.\n", name);
-        return;
-    }
+//     IImage image;
+//     if (!findByName(name, &image)) {
+//         printf("❌ Imagem '%s' não encontrada.\n", name);
+//         return;
+//     }
 
-    printf("⚠️  Tem certeza que deseja deletar '%s'? (S/N): ", name);
-    char confirmation[10];
-    if (!readLine(confirmation, sizeof(confirmation))) {
-        return;
-    }
+//     printf("⚠️  Tem certeza que deseja deletar '%s'? (S/N): ", name);
+//     char confirmation[10];
+//     if (!readLine(confirmation, sizeof(confirmation))) {
+//         return;
+//     }
 
-    if (toupper(confirmation[0]) != 'S') {
-        printf("Operação cancelada.\n");
-        return;
-    }
+//     if (toupper(confirmation[0]) != 'S') {
+//         printf("Operação cancelada.\n");
+//         return;
+//     }
 
-    if (deleteByName(name)) {
-        printf("✅ Imagem '%s' deletada com sucesso!\n", name);
-    } else {
-        printf("❌ Falha ao deletar imagem!\n");
-    }
-}
+//     if (deleteByName(name)) {
+//         printf("✅ Imagem '%s' deletada com sucesso!\n", name);
+//     } else {
+//         printf("❌ Falha ao deletar imagem!\n");
+//     }
+// }
 // Compactar banco de dados
 static void commandCompact(void) {
     printf("Iniciando compactação do banco de dados...\n");

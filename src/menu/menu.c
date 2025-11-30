@@ -57,9 +57,7 @@ void handleMenuChoice(int choice) {
         case 1: commandImport(); break;
         case 2: commandExport(); break;
         case 3: listBTree(); break;
-        case 4: commandDelete(); break;
         case 5: commandCompact(); break;
-        case 6: commandSort(); break;
         case 0: 
             break;
         default: 

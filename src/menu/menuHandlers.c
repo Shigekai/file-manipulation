@@ -25,7 +25,50 @@ static void clearInputBuffer(void) {
 }
 
 
-// Importar imagem PGM para o banco
+//Método reparoveitável que permite que o usuário interaja com os filtros disponíveis
+static int printFilters(uint16_t maxValue, FilterMode *outMode, uint32_t *outThreshold) {
+    printf("\nEscolha o filtro:\n");
+    printf("  0) Sem modificação\n");
+    printf("  1) Limiarização\n");
+    printf("  2) Negativo\n");
+    printf("Opção: ");
+    
+    int modeChoice = 0;
+    if (scanf("%d", &modeChoice) != 1) {
+        printf("Entrada inválida.\n");
+        clearInputBuffer();
+        return 0;
+    }
+    clearInputBuffer();
+    
+    if (modeChoice < 0 || modeChoice > 2) {
+        printf("Opção inválida.\n");
+        return 0;
+    }
+    
+    *outMode = (FilterMode)modeChoice;
+    *outThreshold = 0;
+
+    if (*outMode == FILTER_THRESHOLD) {
+        printf("Valor de limiar (0 a %u): ", maxValue);
+        if (scanf("%u", outThreshold) != 1) {
+            printf("Entrada inválida.\n");
+            clearInputBuffer();
+            return 0;
+        }
+        clearInputBuffer();
+        
+        if (*outThreshold > maxValue) {
+            printf("Valor de limiar inválido.\n");
+            return 0;
+        }
+    }
+    
+    return 1;
+}
+
+// Comando para importar imagem PGM para o banco de dados
+// Com opções de filtro!
 static void commandImport(void) {
     char path[1024], name[512];
     
@@ -34,7 +77,7 @@ static void commandImport(void) {
         return;
     }   
     if (path[0] == '\0') {
-        printf("❌ Caminho não pode ser vazio.\n");
+        printf("Caminho não pode ser vazio.\n");
         return;
     }
 
@@ -43,12 +86,7 @@ static void commandImport(void) {
         return;
     } 
     if (name[0] == '\0') {
-        printf("❌ Nome não pode ser vazio.\n");
-        return;
-    }
-    
-    if (strlen(name) >= 256) {
-        printf("❌ Nome muito longo (máximo: 255 caracteres).\n");
+        printf("Nome não pode ser vazio.\n");
         return;
     }
 
@@ -58,13 +96,26 @@ static void commandImport(void) {
     
     if (!loadPGM(path, &width, &height, &maxValue, 
                 &data, &bytes, &bytesPerPixel)) {
-        printf("❌ Falha ao carregar '%s'.\n", path);
+        printf("Falha ao carregar '%s'.\n", path);
         return;
+    }
+
+    FilterMode mode;
+    uint32_t thresholdValue;
+    if (!printFilters((uint16_t)maxValue, &mode, &thresholdValue)) {
+        free(data);
+        return;
+    }
+
+    if (mode == FILTER_THRESHOLD) {
+        applyThreshold(data, bytes, bytesPerPixel, thresholdValue, maxValue);
+    } else if (mode == FILTER_NEGATIVE) {
+        applyNegative(data, bytes, bytesPerPixel, maxValue);
     }
 
     uint64_t offset = 0;
     if (!addData(data, bytes, &offset)) {
-        printf("❌ Falha ao gravar no banco de dados (database.bin)\n");
+        printf("Falha ao gravar no banco de dados (database.bin)\n");
         free(data);
         return;
     }
@@ -77,20 +128,20 @@ static void commandImport(void) {
         .height = height,
         .maxValue = (uint16_t)maxValue,
         .bpp = bytesPerPixel,
-        .isAvailable = true
     };
 
     if (!addDataKey(name, &image)) {
-        printf("❌ Falha ao gravar no índice.\n");
+        printf("Falha ao gravar no índice.\n");
         return;
     }
     
-    printf("✅ Imagem '%s' importada com sucesso!\n", name);
+    printf("Imagem '%s' importada com sucesso!\n", name);
     printf("   Dimensões: %ux%u | Maxval: %u | BPP: %u\n",
            width, height, maxValue, bytesPerPixel);
     printf("   Offset: %llu | Tamanho: %u bytes\n",
            (unsigned long long)offset, bytes);
 }
+
 // Exportar imagem do banco para arquivo PGM
 static void commandExport(void) {
     char name[512];
@@ -101,51 +152,20 @@ static void commandExport(void) {
     }
     
     if (name[0] == '\0') {
-        printf("❌ Nome não pode ser vazio.\n");
+        printf("Nome não pode ser vazio.\n");
         return;
     }
 
     IImage image;
     if (!findByName(name, &image)) {
-        printf("❌ Imagem '%s' não encontrada.\n", name);
+        printf("Imagem '%s' não encontrada.\n", name);
         return;
     }
 
-    printf("\nEscolha o filtro:\n");
-    printf("  0) Sem modificação\n");
-    printf("  1) Limiarização\n");
-    printf("  2) Negativo\n");
-    printf("Opção: ");
-    
-    int modeChoice = 0;
-    if (scanf("%d", &modeChoice) != 1) {
-        printf("❌ Entrada inválida.\n");
-        clearInputBuffer();
+    FilterMode mode;
+    uint32_t thresholdValue;
+    if (!printFilters(image.maxValue, &mode, &thresholdValue)) {
         return;
-    }
-    clearInputBuffer();
-    
-    if (modeChoice < 0 || modeChoice > 2) {
-        printf("❌ Opção inválida.\n");
-        return;
-    }
-    
-    FilterMode mode = (FilterMode)modeChoice;
-
-    uint32_t thresholdValue = 0;
-    if (mode == FILTER_THRESHOLD) {
-        printf("Valor de limiar (0 a %u): ", image.maxValue);
-        if (scanf("%u", &thresholdValue) != 1) {
-            printf("❌ Entrada inválida.\n");
-            clearInputBuffer();
-            return;
-        }
-        clearInputBuffer();
-        
-        if (thresholdValue > image.maxValue) {
-            printf("❌ Valor de limiar inválido.\n");
-            return;
-        }
     }
 
     char outputPath[1024];
@@ -155,16 +175,17 @@ static void commandExport(void) {
     }
     
     if (outputPath[0] == '\0') {
-        printf("❌ Caminho de saída não pode ser vazio.\n");
+        printf("Caminho de saída não pode ser vazio.\n");
         return;
     }
 
     if (exportImage(&image, outputPath, mode, thresholdValue)) {
-        printf("✅ Imagem exportada com sucesso em '%s'.\n", outputPath);
+        printf("Imagem exportada com sucesso em '%s'.\n", outputPath);
     } else {
-        printf("❌ Falha na exportação.\n");
+        printf("Falha na exportação.\n");
     }
 }
+
 // Deletar imagem do banco
 static void commandDelete(void) {
     char name[512];

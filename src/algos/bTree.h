@@ -3,8 +3,19 @@
 
 #include "headers.h"
 
-// Inicializa o arquivo da B-tree
-void initBTree(void);k
+// === Funções de ciclo de vida (virtualização da raiz) ===
+
+// Abre a B-tree e carrega header/raiz em memória
+int openBTree(void);
+
+// Fecha a B-tree, persistindo alterações pendentes
+void closeBTree(void);
+
+// Força sincronização da raiz/header com o disco
+int syncBTree(void);
+
+// Inicializa o arquivo da B-tree (cria se não existir)
+void initBTree(void);
 
 // Insere uma imagem na B-tree
 int insertBTree(const IImage *image);

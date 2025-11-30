@@ -23,7 +23,7 @@
 #define BTREE_ORDER 3
 #define BTREE_MAX_KEYS (BTREE_ORDER - 1)    
 #define BTREE_MAX_CHILDREN BTREE_ORDER  
-#define BTREE_MIN_KEYS ((BTREE_ORDER / 2) - 1)
+#define BTREE_MIN_KEYS ((BTREE_ORDER / 2) - 1 != 0 ? (BTREE_ORDER / 2) - 1 : 1)
 
 typedef enum {
     FILTER_NONE = 0,      // Exporta sem modificação
@@ -57,6 +57,16 @@ typedef struct {
     uint32_t nodeCount;
     uint64_t nextFreeOffset;
 } BTreeHeader;
+
+// Contexto da B-Tree com raiz virtualizada em memória
+typedef struct {
+    FILE *file;              // Handle persistente do arquivo
+    BTreeHeader header;      // Header cacheado em memória
+    BTreeNode rootNode;      // Raiz cacheada em memória
+    bool headerDirty;        // Header precisa ser escrito no disco
+    bool rootDirty;          // Raiz precisa ser escrita no disco
+    bool isOpen;             // Contexto está aberto/válido
+} BTreeContext;
 
 #define IIMAGE_SIZE sizeof(IImage)
 #define MAX_NAME_LENGTH 255

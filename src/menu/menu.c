@@ -45,6 +45,8 @@ void showMenu(void) {
         
     } while (choice != 0);
     
+    closeBTree();
+    
     printf("\n╔════════════════════════════════════════════════════════╗\n");
     printf("║               Programa encerrado. Até logo!            ║\n");
     printf("╚════════════════════════════════════════════════════════╝\n\n");

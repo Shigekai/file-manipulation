@@ -332,3 +332,58 @@ void listBTree(void) {
     
     fclose(file);
 }
+
+// Função auxiliar recursiva para coletar imagens por nome
+//Útil para coletar as variações de imagens com o mesmo nome
+static void collectByName(FILE *file, uint64_t nodeOffset, const char *name, 
+                          IImage *results, int maxResults, int *count) {
+    if (nodeOffset == 0 || *count >= maxResults) {
+        return;
+    }
+    
+    BTreeNode node;
+    if (!readNode(file, nodeOffset, &node)) {
+        return;
+    }
+    
+    for (int i = 0; i < node.keyCount; i++) {
+        if (!node.isLeaf) {
+            collectByName(file, node.children[i], name, results, maxResults, count);
+        }
+        
+        if (*count < maxResults && strcmp(node.keys[i].name, name) == 0) {
+            results[*count] = node.keys[i];
+            (*count)++;
+        }
+    }
+    
+    if (!node.isLeaf) {
+        collectByName(file, node.children[node.keyCount], name, results, maxResults, count);
+    }
+}
+
+// Busca todas as imagens com um determinado nome
+//Utiliza o método recursivo collectByName
+int searchByNameBTree(const char *name, IImage *results, int maxResults) {
+    FILE *file = fopen(INDEX_PATH, "rb");
+    if (!file) {
+        return 0;
+    }
+    
+    BTreeHeader header;
+    if (!readHeader(file, &header)) {
+        fclose(file);
+        return 0;
+    }
+    
+    if (header.rootOffset == 0) {
+        fclose(file);
+        return 0;
+    }
+    
+    int count = 0;
+    collectByName(file, header.rootOffset, name, results, maxResults, &count);
+    
+    fclose(file);
+    return count;
+}

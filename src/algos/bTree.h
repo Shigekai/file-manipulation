@@ -4,7 +4,7 @@
 #include "headers.h"
 
 // Inicializa o arquivo da B-tree
-void initBTree(void);
+void initBTree(void);k
 
 // Insere uma imagem na B-tree
 int insertBTree(const IImage *image);
@@ -14,5 +14,7 @@ int searchBTree(const char *name, FilterMode filterMode, uint32_t thresholdValue
 
 // Lista todas as imagens da B-tree em ordem
 void listBTree(void);
+
+int searchByNameBTree(const char *name, IImage *results, int maxResults);
 
 #endif // BTREE_H

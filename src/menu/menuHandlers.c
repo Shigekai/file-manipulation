@@ -67,6 +67,54 @@ static int printFilters(uint16_t maxValue, FilterMode *outMode, uint32_t *outThr
     return 1;
 }
 
+// Exibe as variações de uma imagem e permite o usuário escolher
+// Retorna o índice escolhido (0-based) ou -1 se cancelado
+static int printImageSelection(IImage *images, int count) {
+    printf("\nEncontradas %d variações da imagem:\n", count);
+    
+    for (int i = 0; i < count; i++) {
+        printf("  %d) ", i + 1);
+        
+        switch (images[i].filterMode) {
+            case FILTER_NONE:
+                printf("Sem filtro");
+                break;
+            case FILTER_THRESHOLD:
+                printf("Limiarização (threshold=%u)", images[i].thresholdValue);
+                break;
+            case FILTER_NEGATIVE:
+                printf("Negativo");
+                break;
+        }
+        
+        printf(" | %ux%u | %u bytes\n", 
+               images[i].width, images[i].height, images[i].size);
+    }
+    
+    printf("  0) Cancelar\n");
+    printf("Escolha: ");
+    
+    int choice;
+    if (scanf("%d", &choice) != 1) {
+        printf("Entrada inválida.\n");
+        clearInputBuffer();
+        return -1;
+    }
+    clearInputBuffer();
+    
+    if (choice == 0) {
+        printf("Operação cancelada.\n");
+        return -1;
+    }
+    
+    if (choice < 1 || choice > count) {
+        printf("Opção inválida.\n");
+        return -1;
+    }
+    
+    return choice - 1;
+}
+
 // Comando para importar imagem PGM para o banco de dados
 // Com opções de filtro!
 static void commandImport(void) {
@@ -142,9 +190,13 @@ static void commandImport(void) {
         .height = height,
         .maxValue = (uint16_t)maxValue,
         .bpp = bytesPerPixel,
+        .filterMode = mode,
+        .thresholdValue = thresholdValue
     };
+    strncpy(image.name, name, MAX_NAME_LENGTH - 1);
+    image.name[MAX_NAME_LENGTH - 1] = '\0';
 
-    if (!addDataKey(name, &image)) {
+    if (!insertBTree(&image)) {
         printf("Falha ao gravar no índice.\n");
         return;
     }
@@ -156,7 +208,6 @@ static void commandImport(void) {
            (unsigned long long)offset, bytes);
 }
 
-// Exportar imagem do banco para arquivo PGM
 static void commandExport(void) {
     char name[512];
     
@@ -170,15 +221,43 @@ static void commandExport(void) {
         return;
     }
 
-    IImage image;
-    if (!findByName(name, &image)) {
+    #define MAX_VARIATIONS 10
+    IImage results[MAX_VARIATIONS];
+    int count = searchByNameBTree(name, results, MAX_VARIATIONS);
+    
+    if (count == 0) {
         printf("Imagem '%s' não encontrada.\n", name);
         return;
     }
 
+    IImage *selectedImage;
+    
+    if (count == 1) {
+        selectedImage = &results[0];
+        printf("Imagem encontrada: ");
+        switch (selectedImage->filterMode) {
+            case FILTER_NONE:
+                printf("sem filtro\n");
+                break;
+            case FILTER_THRESHOLD:
+                printf("limiarização (threshold=%u)\n", selectedImage->thresholdValue);
+                break;
+            case FILTER_NEGATIVE:
+                printf("negativo\n");
+                break;
+        }
+    } else {
+        int selection = printImageSelection(results, count);
+        if (selection < 0) {
+            return;
+        }
+        selectedImage = &results[selection];
+    }
+
+    // Solicitar opções de filtro adicional na exportação
     FilterMode mode;
     uint32_t thresholdValue;
-    if (!printFilters(image.maxValue, &mode, &thresholdValue)) {
+    if (!printFilters(selectedImage->maxValue, &mode, &thresholdValue)) {
         return;
     }
 
@@ -193,7 +272,7 @@ static void commandExport(void) {
         return;
     }
 
-    if (exportImage(&image, outputPath, mode, thresholdValue)) {
+    if (exportImage(selectedImage, outputPath, mode, thresholdValue)) {
         printf("Imagem exportada com sucesso em '%s'.\n", outputPath);
     } else {
         printf("Falha na exportação.\n");

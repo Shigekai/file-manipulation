@@ -5,27 +5,6 @@
 //métodos públicos que manipulam o arquivo de índice do banco de dados
 
 
-//Este método adiciona os metadados de um novo arquivo (imagem) ao arquivo de índice.
-//Escrevemos cada campo que descreve a nossa imagem a partir da linha 16
-//Veja mais sobre a tipagem de image em headers.h
-int addDataKey(const char *name, const IImage *image) {
-    FILE *indexFile = fopen(INDEX_PATH, "ab");
-    if (!indexFile) {
-        perror("Erro ao abrir o arquivo de índice");
-        return 0;
-    }
-
-    IImage newImage = *image;
-    newImage.isAvailable = true;
-    strncpy(newImage.name, name, MAX_NAME_LENGTH);
-    newImage.name[MAX_NAME_LENGTH] = '\0';
-    
-    int success = writeRecord(indexFile, &newImage);  
-    fclose(indexFile); 
-    
-    return success;
-}
-
 //Procura no arquivo de índice por um nome.
 //Usa o algoritmo simples de busca sequencial O(N).
 int findByName(const char *name, IImage *out) {

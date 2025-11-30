@@ -2,9 +2,7 @@
 #include "menu.h"
 #include "../io/pgm.h"
 #include "database.h"
-#include "index.h"
 #include "handleImages.h"
-#include "externalSort.h"
 #include "../algos/bTree.h"
 
 //Funções estáticas auxiliares do menu
